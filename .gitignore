@@ -1,0 +1,4 @@
+work/books/
+work/*.txt
+work/prev_*.png
+__pycache__/

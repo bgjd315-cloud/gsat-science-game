@@ -1,0 +1,18 @@
+// 組出 index.html：讀 src/bank_*.json（每題都附學測出處 refs），轉成遊戲格式塞進 template
+const fs=require("fs"),p=require("path");const d=p.join(__dirname,"src");
+const SUBJ={phy:"物理",chem:"化學",bio:"生物",earth:"地科"};
+const rows=[],QY={},QR={},seen=new Set();let drop=0;
+for(const k of Object.keys(SUBJ)){const f=p.join(d,`bank_${k}.json`);if(!fs.existsSync(f))continue;
+  for(const o of JSON.parse(fs.readFileSync(f,"utf8"))){
+    const refs=(o.refs||[]).filter(r=>/^1(1[1-9]|[2-9]\d)-\d+$/.test(r));
+    if(!refs.length||seen.has(o.q)){drop++;continue}seen.add(o.q);   // 沒考過或重複就不收
+    const src=`${SUBJ[k]}${o.ch||""}`;
+    rows.push(o.t==="tf"?[o.u,o.q,o.tf?1:0,o.exp,src]:[o.u,o.q,o.a,...o.w.slice(0,3),o.exp,src]);
+    QY[o.q]=[...new Set(refs.map(r=>+r.split("-")[0]))].sort();QR[o.q]=refs.map(r=>{const[y,n]=r.split("-");return y+"-"+n.padStart(2,"0")}).sort();}}
+let bank="QB.push(\n"+rows.map(r=>JSON.stringify(r)).join(",\n")+"\n);\nconst QY="+JSON.stringify(QY)+";\nconst QREF="+JSON.stringify(QR)+";";
+const imgDir=p.join(__dirname,"img");
+const imgs=fs.existsSync(imgDir)?fs.readdirSync(imgDir).filter(f=>f.endsWith(".webp")).map(f=>f.replace(".webp","")):[];
+bank+="\nconst IMG=new Set("+JSON.stringify(imgs)+");";
+const html=fs.readFileSync(p.join(d,"template.html"),"utf8").replace("/*__BANK__*/",()=>bank);
+fs.writeFileSync(p.join(__dirname,"index.html"),html);
+console.log("built",html.length,"bytes; questions:",rows.length,"dropped:",drop,"images:",imgs.length);
