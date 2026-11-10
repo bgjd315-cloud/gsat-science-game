@@ -236,10 +236,43 @@ function record(q,ok){const s=S[q.id]||(S[q.id]={c:0,w:0,s:0});
 const mastered=q=>{const s=S[q.id];return s&&s.s>=2};
 
 /* ========= 音效 ========= */
-let AC;function beep(type){if(!PREF.sound)return;try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();
-  const seq={ok:[[660,.07],[990,.1]],bad:[[220,.18]],tick:[[880,.04]],end:[[523,.1],[659,.1],[784,.18]],go:[[440,.08]]}[type];
-  let t=AC.currentTime;for(const [f,d] of seq){const o=AC.createOscillator(),g=AC.createGain();o.type=type==="bad"?"sawtooth":"triangle";
-  o.frequency.value=f;g.gain.setValueAtTime(.12,t);g.gain.exponentialRampToValueAtTime(.001,t+d);o.connect(g);g.connect(AC.destination);o.start(t);o.stop(t+d);t+=d}}catch(e){}}
+/* ========= 音效：WebAudio 即時合成的對戰風音效（不需要音檔） ========= */
+let AC,MASTER,NOISE,BUS;
+function sfxInit(){if(AC)return;AC=new (window.AudioContext||window.webkitAudioContext)();
+  const comp=AC.createDynamicsCompressor();comp.threshold.value=-14;comp.ratio.value=4;
+  MASTER=AC.createGain();MASTER.gain.value=.55;MASTER.connect(comp);comp.connect(AC.destination);
+  const len=AC.sampleRate;NOISE=AC.createBuffer(1,len,AC.sampleRate);const d=NOISE.getChannelData(0);for(let i=0;i<len;i++)d[i]=Math.random()*2-1}
+function tone(f,dur,{type="square",f2=0,at=0,vol=.2,attack=.005}={}){const t=AC.currentTime+at,o=AC.createOscillator(),g=AC.createGain();
+  o.type=type;o.frequency.setValueAtTime(f,t);if(f2)o.frequency.exponentialRampToValueAtTime(f2,t+dur);
+  g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(vol,t+attack);g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+  o.connect(g);g.connect(BUS||MASTER);o.start(t);o.stop(t+dur+.02)}
+function noise(dur,{at=0,vol=.3,type="bandpass",f=2000,f2=0,q=1}={}){const t=AC.currentTime+at,src=AC.createBufferSource(),fl=AC.createBiquadFilter(),g=AC.createGain();
+  src.buffer=NOISE;fl.type=type;fl.frequency.setValueAtTime(f,t);if(f2)fl.frequency.exponentialRampToValueAtTime(f2,t+dur);fl.Q.value=q;
+  g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(.0001,t+dur);src.connect(fl);fl.connect(g);g.connect(BUS||MASTER);src.start(t);src.stop(t+dur+.02)}
+const kick=(at=0,vol=.6)=>tone(150,.25,{type:"sine",f2:40,at,vol});
+const SFX={
+  click(){tone(1400,.035,{type:"triangle",vol:.1});tone(2100,.03,{type:"triangle",vol:.05,at:.02})},          // 按鈕
+  tick(){kick(0,.55);tone(1500,.05,{vol:.07})},                                                                 // 倒數 3、2、1
+  go(){noise(.45,{f:400,f2:6000,vol:.16,q:.7});kick(.42,.85);noise(.35,{at:.42,type:"lowpass",f:3000,f2:200,vol:.45}); // FIGHT!
+    [523,659,784,1047].forEach(f=>tone(f,.55,{type:"sawtooth",at:.42,vol:.06}))},
+  ok(c=1){const up=Math.pow(2,Math.min(c-1,9)/6);                                                               // 揮劍命中，連對越多音越高
+    noise(.12,{type:"highpass",f:2500,f2:9000,vol:.2});tone(880*up,.08,{at:.03,vol:.09});tone(1320*up,.2,{at:.1,vol:.08})},
+  combo(){[0,4,7,12,16,19].forEach((st,i)=>tone(660*Math.pow(2,st/12),.12,{type:"sawtooth",at:i*.05,vol:.07}));      // 連擊升級
+    noise(.45,{at:.28,type:"highpass",f:6000,vol:.08})},
+  bad(){kick(0,.75);tone(190,.3,{type:"sawtooth",f2:70,vol:.16});noise(.2,{type:"lowpass",f:900,vol:.3})},       // 被擊中
+  life(){kick(0,.85);noise(.35,{f:1800,f2:300,vol:.35,q:2});tone(392,.15,{at:.05,vol:.09});tone(311,.4,{at:.2,vol:.09})}, // 失去一條命
+  timeup(){tone(1000,.5,{type:"triangle",f2:200,vol:.16});kick(.05,.5)},                                        // 時間到
+  warn(){tone(110,.11,{type:"sine",vol:.55});tone(105,.12,{type:"sine",vol:.38,at:.15})},                       // 心跳警告
+  lock(){tone(300,.12,{f2:150,vol:.14});noise(.08,{f:1200,vol:.2})},                                            // 對決答錯鎖住
+  end(){[523,659,784].forEach((f,i)=>tone(f,.16,{at:i*.11,vol:.08}));kick(.36,.6);                              // 結算
+    [523,659,784,1047].forEach(f=>tone(f,.9,{type:"sawtooth",at:.36,vol:.045}));noise(.8,{at:.36,type:"highpass",f:5000,vol:.06})},
+  record(){SFX.end();[1047,1319,1568,2093].forEach((f,i)=>tone(f,.16,{at:1.05+i*.08,vol:.07}));noise(1,{at:1.05,type:"highpass",f:7000,vol:.07})} // 新紀錄、對決勝利
+};
+/* 各音效音量平衡（以實測峰值校正：按鈕最輕，答對、被擊中、結算較響） */
+const SFX_LV={click:15,tick:3.7,go:.9,ok:10,combo:3,bad:3.6,life:4,timeup:1.8,warn:1.7,lock:14,end:1.3,record:1.3};
+function beep(type,arg){if(!PREF.sound)return;try{sfxInit();if(AC.state==="suspended")AC.resume();
+  BUS=AC.createGain();BUS.gain.value=SFX_LV[type]||1;BUS.connect(MASTER);(SFX[type]||SFX.click)(arg)}catch(e){}finally{BUS=null}}
+document.addEventListener("click",ev=>{const b=ev.target.closest("button,.chip,a.btn");if(b&&!b.classList.contains("opt")&&b.id!=="snd")beep("click")},true);
 
 /* ========= 工具 ========= */
 const $=s=>document.querySelector(s);
@@ -300,7 +333,7 @@ function home(){clearTimers();document.body.classList.remove("noscroll");
   </div>
   <div class="foot">考點整理自 115 學年度高中物理、化學、生物、地科（全）課本，<br>並逐題比對 ${YR} 年學測自然試題（108 課綱），只保留學測考過的考點；歷屆題解析見 <a href="https://bgjd315-cloud.github.io/gsat-science-map/" target="_blank" rel="noopener">自然考點導航</a>・紀錄只存在這台裝置</div>`;
   $("#pname").oninput=e=>{PREF.name=e.target.value.trim();save()};
-  $("#snd").onclick=()=>{PREF.sound=!PREF.sound;save();home()};
+  $("#snd").onclick=()=>{PREF.sound=!PREF.sound;save();home();beep("combo")};
   app.querySelectorAll("[data-subj]").forEach(b=>b.onclick=()=>{PREF.subj=b.dataset.subj;PREF.units=[];save();home()});
   app.querySelectorAll("[data-vol]").forEach(b=>b.onclick=()=>{const v=b.dataset.vol;PREF.vols=PREF.vols||[];
     if(!v)PREF.vols=[];else{const i=PREF.vols.indexOf(v);if(i>=0)PREF.vols.splice(i,1);else PREF.vols.push(v)}save();home()});
@@ -328,6 +361,7 @@ function countdown(cb){const d=document.createElement("div");d.className="countd
 function speedTick(){const left=Math.max(0,G.end-Date.now());G.time=left/1000;const t=$("#tbar");
   if(t){t.style.width=(left/600)+"%";t.parentElement.classList.toggle("low",left<10000)}
   const tb=$("#tval");if(tb)tb.textContent=Math.ceil(G.time);
+  {const sec=Math.ceil(left/1000);if(left<10000&&left>0&&sec!==G.warnS){G.warnS=sec;beep("warn")}}
   if(left<=0)finish()}
 function hudHTML(){const m=G.mode;let left="";
   if(m==="speed")left=`<div class="box"><small>時間</small><b id="tval">${Math.ceil(G.time)}</b></div>`;
@@ -349,8 +383,9 @@ function nextQ(){
   <div id="fb"></div>`;
   $("#quit").onclick=()=>{if(confirm("確定要離開這一局嗎？")){clearTimers();home()}};
   app.querySelectorAll(".opt").forEach(b=>b.onclick=()=>answer(+b.dataset.i));
-  if(timed){G.qEnd=Date.now()+lim*1000;const id=setInterval(()=>{if(G.locked)return;const left=G.qEnd-Date.now();
+  if(timed){G.qEnd=Date.now()+lim*1000;G.warnQ=0;const id=setInterval(()=>{if(G.locked)return;const left=G.qEnd-Date.now();
       const bar=$("#tbar");if(bar){bar.style.width=Math.max(0,left/(lim*10))+"%";bar.parentElement.classList.toggle("low",left<3000)}
+      {const sec=Math.ceil(left/1000);if(left<3000&&left>0&&sec!==G.warnQ){G.warnQ=sec;beep("warn")}}
       if(left<=0){clearInterval(id);answer(-1)}},100);timers.push(id);G.qTimer=id}
   if(G.mode==="speed")speedTick();
 }
@@ -360,8 +395,8 @@ function answer(i){if(G.locked)return;G.locked=true;if(G.qTimer){clearInterval(G
   const btns=app.querySelectorAll(".opt");btns.forEach((b,j)=>{const o=G.opts[j];if(o===q.a)b.classList.add("ok");else if(j===i)b.classList.add("no");else b.classList.add("dim")});
   if(ok){G.right++;G.combo++;G.maxCombo=Math.max(G.maxCombo,G.combo);const bonus=Math.min(G.combo-1,5)*20;let pts=100+bonus;
     if(G.mode==="survive")pts+=Math.round(Math.max(0,G.qEnd-Date.now())/100);
-    G.score+=pts;beep("ok");popText(G.combo>2?`+${pts} 🔥${G.combo}`:`+${pts}`,"var(--gold)")}
-  else{G.wrong++;G.combo=0;G.missed.push({q,picked});beep("bad");$("#qc").classList.add("shake");
+    G.score+=pts;beep("ok",G.combo);if([3,5,10,15,20].includes(G.combo))setTimeout(()=>beep("combo"),170);popText(G.combo>2?`+${pts} 🔥${G.combo}`:`+${pts}`,"var(--gold)")}
+  else{G.wrong++;G.combo=0;G.missed.push({q,picked});beep(i<0?"timeup":G.mode==="survive"?"life":"bad");$("#qc").classList.add("shake");
     if(G.mode==="speed"){G.end-=3000;popText("−3 秒","var(--bad)")}
     if(G.mode==="survive"){G.lives--;popText(i<0?"時間到！":"💔","var(--bad)")}}
   const ansTxt=q.tf?(q.a==="O"?"⭕ 正確":"❌ 錯誤"):q.a;
@@ -383,7 +418,7 @@ document.addEventListener("keydown",e=>{
   let k=e.key.toLowerCase();if(G.cur&&G.cur.tf){if(k==="o")k="1";if(k==="x")k="2"}
   const n=parseInt(k,10);if(n>=1&&n<=G.opts.length)answer(n-1)});
 
-function finish(){clearTimers();if(!G||G.done)return;G.done=true;beep("end");
+function finish(){clearTimers();if(!G||G.done)return;G.done=true;
   const acc=G.answered?Math.round(G.right/G.answered*100):0;
   let stars="";if(G.mode==="practice"||G.mode==="review"){const n=acc>=90?3:acc>=70?2:acc>=40?1:0;stars=`<div class="stars">${"⭐".repeat(n)}${"☆".repeat(3-n)}</div>`}
   let rec="";const name=PREF.name||"無名英雄";
@@ -391,6 +426,7 @@ function finish(){clearTimers();if(!G||G.done)return;G.done=true;beep("end");
     const arr=LB[key]||(LB[key]=[]);const best=arr.length?arr[0].s:0;
     arr.push({n:name,s:G.score,r:G.right,a:acc,d:new Date().toLocaleDateString("zh-TW")});arr.sort((a,b)=>b.s-a.s);LB[key]=arr.slice(0,10);save();
     if(G.score>best&&G.score>0)rec=`<div><span class="newrec">🎉 新紀錄！</span></div>`}
+  beep(rec?"record":"end");
   const scopeName=PREF.units.length?`自選 ${PREF.units.length} 單元`:(PREF.subj==="all"?"全部範圍":SUBJ[PREF.subj].n);
   app.innerHTML=`<div class="top"><button class="back" id="hm">🏠 首頁</button><div class="ttl">${MODES[G.mode]}・${G.mode==="review"?"錯題本":scopeName}</div></div>
   <div class="result">${artTag("mascot_trophy","trophy")}${rec}${stars}<div class="big">${G.score}</div><div style="color:var(--mute)">${esc(name)} 的得分</div>
@@ -446,7 +482,7 @@ function duelNext(){if(!DUEL)return;clearTimers();
   timers.push(setTimeout(()=>duelReveal(null),15000))}
 function duelAnswer(p,i){if(!DUEL||!DUEL.open||DUEL.lock[p]||i>=DUEL.opts.length)return;const q=DUEL.q;
   if(DUEL.opts[i]===q.a){DUEL.sc[p]++;$("#sc"+p).textContent=DUEL.sc[p];beep("ok");record(q,true);save();duelReveal(p)}
-  else{DUEL.lock[p]=true;beep("bad");$("#do"+p).querySelectorAll(".opt")[i].classList.add("no");$("#do"+p).classList.add("lock");$("#dm"+p).textContent="答錯了，這題鎖住！";
+  else{DUEL.lock[p]=true;beep("lock");$("#do"+p).querySelectorAll(".opt")[i].classList.add("no");$("#do"+p).classList.add("lock");$("#dm"+p).textContent="答錯了，這題鎖住！";
     if(DUEL.lock[0]&&DUEL.lock[1]){record(q,false);save();duelReveal(null)}}}
 function duelReveal(winner){if(!DUEL||!DUEL.open)return;DUEL.open=false;clearTimers();const q=DUEL.q;
   for(const p of [0,1]){const o=$("#do"+p);o.classList.remove("lock");o.querySelectorAll(".opt").forEach((b,j)=>{if(DUEL.opts[j]===q.a)b.classList.add("ok");else if(!b.classList.contains("no"))b.classList.add("dim")});
@@ -454,7 +490,7 @@ function duelReveal(winner){if(!DUEL||!DUEL.open)return;DUEL.open=false;clearTim
   if(DUEL.sc[0]>=DUEL.win||DUEL.sc[1]>=DUEL.win){timers.push(setTimeout(()=>duelEnd(false),2600));return}
   timers.push(setTimeout(duelNext,3200))}
 function duelEnd(quit){clearTimers();const d=DUEL;DUEL=null;const el=$("#duel");if(el)el.remove();document.body.style.overflow="";
-  if(quit||!d){home();return}beep("end");const w=d.sc[0]>d.sc[1]?"🔴 玩家 1":"🔵 玩家 2";
+  if(quit||!d){home();return}beep("record");const w=d.sc[0]>d.sc[1]?"🔴 玩家 1":"🔵 玩家 2";
   app.innerHTML=`<div class="top"><button class="back" id="hm">🏠 首頁</button><div class="ttl">⚔️ 雙人對決</div></div>
   <div class="result">${artTag("mascot_trophy","trophy")}<div class="big">${w} 獲勝！</div><div class="rgrid" style="grid-template-columns:1fr 1fr"><div><small>🔴 玩家 1</small><b>${d.sc[0]}</b></div><div><small>🔵 玩家 2</small><b>${d.sc[1]}</b></div></div>
   <div class="btnrow"><button class="btn gold" id="again">🔁 再戰一回</button><button class="btn" id="hm2">回首頁</button></div></div>`;
