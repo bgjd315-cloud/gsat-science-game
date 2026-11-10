@@ -7,14 +7,14 @@
 - 題庫共 727 題，只收 108 課綱學測自然 111～115 年（289 題）考過的知識點，每題標示考過的年份與題號，並標示考點類型：
   - 🎯 直接得分（519 題）：記住就能直接判斷學測題的正解或選項對錯。
   - 🧩 判讀基礎（208 題）：學測題要讀圖、計算或推理，但必須先記得這個知識點。
-  - 來源分課本考點（四科必修課本）、「・另版CHn」（化學、物理第二版本課本才有的考點，`src/bank_chem_v2.json`、`src/bank_phy_v2.json`，兩版比對見 `work/report_chem_v2.json`、`work/report_phy_v2.json`）與「・學測補充」（學測考過但課本沒有的選修或國中內容）。
+  - 來源分四種，顯示在題目標籤：課本考點（四科必修課本）；「・另版CHn」（化學、物理第二版本課本才有，`src/bank_<科>_v2.json`，兩版比對見 `work/report_<科>_v2.json`）；「・國中學過」與「・高中選修」（學測考過但兩版必修課本都沒有，放 `src/bank_<科>_extra.json`；依國中版南一七上～九下題庫比對分類，證據在 `work/audit/jr_labels.json`）。
   - 2026-11 逐題盤點後刪除 184 題：考題沒用到、題幹已給出、人名年代單位等瑣碎細節、只是情境、或只是重做考題計算。逐題判定與理由見 `work/audit/盤點報告.html`（`report.json`、`deleted.json`）。
 - 模式：極速 60 秒、生存挑戰、單元特訓、雙人對決、錯題特訓、排行榜、考點圖鑑；可依科目、單元、考過年份篩選。
 - 音效：WebAudio 即時合成的對戰風音效（不用音檔），含倒數開戰、揮劍命中（連對越多音越高）、連擊升級、被擊中、失去生命、最後幾秒心跳、時間到、結算與破紀錄號角；首頁喇叭鈕可關閉。
 - 學習紀錄與排行榜只存在各自的裝置（localStorage，前綴 gsatgame_，與國中版分開）。
 
 ## 檔案
-- `src/bank_phy.json`、`bank_chem.json`、`bank_bio.json`、`bank_earth.json`：課本考點；`src/bank_<科>_extra.json`：學測補充（`ch` 為「・學測補充」）。每題 `{u, t:"mc"|"tf", q, a, w[3] | tf, exp, ch, refs:["113-05"]}`
+- `src/bank_phy.json`、`bank_chem.json`、`bank_bio.json`、`bank_earth.json`：課本考點；`src/bank_<科>_extra.json`：課本外的學測考點（`ch` 為「・國中學過」或「・高中選修」）。每題 `{u, t:"mc"|"tf", q, a, w[3] | tf, exp, ch, refs:["113-05"]}`
 - `src/gsat_ref/`：歷屆學測自然逐題資料（取自自然考點導航 gsat-science-map 的 tools/data、detail2）
 - `src/exam_index/gsat_N111_115.jsonl`：289 題考點索引
 - `src/template.html`：遊戲本體；`node build.js` 組出 `index.html`（沒有 refs 或重複的題目不收）
