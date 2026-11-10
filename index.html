@@ -1066,7 +1066,7 @@ function home(){clearTimers();document.body.classList.remove("noscroll");
     ${modeCard("board","m6","🏆","排行榜","這台裝置上的最高分紀錄")}
     ${modeCard("dex","m7","📖","考點圖鑑","依單元瀏覽全部必背考點，可搜尋")}
   </div>
-  <div class="foot">考點整理自 115 學年度高中物理、化學、生物、地科（全）課本，<br>並逐題比對 ${YR} 年學測自然試題（108 課綱），只保留學測考過的考點；歷屆題解析見 <a href="https://bgjd315-cloud.github.io/gsat-science-map/" target="_blank" rel="noopener">自然考點導航</a>・紀錄只存在這台裝置</div>`;
+  <div class="foot">考點整理自 115 學年度高中物理、化學、生物、地科（全）課本，<br>並逐題比對 ${YR} 年學測自然試題（108 課綱），只保留學測考過的考點・紀錄只存在這台裝置</div>`;
   $("#pname").oninput=e=>{PREF.name=e.target.value.trim();save()};
   $("#snd").onclick=()=>{PREF.sound=!PREF.sound;save();home();beep("combo")};
   app.querySelectorAll("[data-subj]").forEach(b=>b.onclick=()=>{PREF.subj=b.dataset.subj;PREF.units=[];save();home()});
