@@ -2,8 +2,8 @@
 const fs=require("fs"),p=require("path");const d=p.join(__dirname,"src");
 const SUBJ={phy:"物理",chem:"化學",bio:"生物",earth:"地科"};
 const rows=[],QY={},QR={},QC={},seen=new Set();let drop=0;
-// bank_<科>.json：課本知識點；bank_<科>_extra.json：學測考過但課本沒有的（ch＝「・學測補充」）
-for(const k of Object.keys(SUBJ))for(const f of [`bank_${k}.json`,`bank_${k}_extra.json`].map(x=>p.join(d,x))){if(!fs.existsSync(f))continue;
+// bank_<科>.json：課本知識點；bank_<科>_v2.json：另一版本課本才有的知識點（ch＝「・另版CHn」）；bank_<科>_extra.json：學測考過但課本沒有的（ch＝「・學測補充」）
+for(const k of Object.keys(SUBJ))for(const f of [`bank_${k}.json`,`bank_${k}_v2.json`,`bank_${k}_extra.json`].map(x=>p.join(d,x))){if(!fs.existsSync(f))continue;
   for(const o of JSON.parse(fs.readFileSync(f,"utf8"))){
     const refs=(o.refs||[]).filter(r=>/^1(1[1-9]|[2-9]\d)-\d+$/.test(r));
     if(!refs.length||seen.has(o.q)||o.cls==="C"){drop++;continue}seen.add(o.q);   // 沒考過、重複或盤點判為刪除就不收
