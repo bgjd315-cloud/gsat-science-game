@@ -1,0 +1,51 @@
+# 年度更新：加入新一屆學測自然
+
+每年 3/16 由排程 `gsat-science-game-yearly-update` 執行（自然考點導航的排程 `sci-map-116-gsat` 每年 3/2 先把新年度學測自然整理好，這裡直接沿用它的資料）。以下 `NEW` 代表新年度民國年（例如 116）。
+
+原則（老師指定，不要改）：只收**學測自然**，不收分科；只用 108 課綱以後（111 年起）；知識點來源是高中物理、化學、生物、地科（全）部定必修課本；**沒有在學測考過的知識點不放進遊戲**。
+
+## 0. 準備與檢查
+1. `cd "C:\Claude 系統及作品\gsat-science-game" && git pull`（資料夾不在就 `gh repo clone bgjd315-cloud/gsat-science-game "C:\Claude 系統及作品\gsat-science-game"`）。
+2. 若 `src/gsat_ref/data/NNEW.json` 已存在，代表今年做過了，回報後結束。
+3. 取自然考點導航的新年度資料：
+   ```
+   gh api repos/bgjd315-cloud/gsat-science-map/contents/tools/data/NNEW.json --jq .download_url
+   gh api repos/bgjd315-cloud/gsat-science-map/contents/tools/detail2/NNEW.json --jq .download_url
+   ```
+   兩個都要有。任一個不存在（404），代表自然考點導航還沒加入今年學測：**不要改任何檔案、不要 push**，回報「自然考點導航尚未加入 NEW 年學測自然，請先確認排程 sci-map-116-gsat 是否跑過，之後再手動執行本排程」，結束。
+   有的話下載到 `src/gsat_ref/data/` 與 `src/gsat_ref/detail2/`。
+4. 課本文字在 `work/books/<物理|化學|生物|地科>/*.txt`（不進 git）。不存在時，看 `C:\Users\bgjd3\Downloads\` 有沒有「115學年度_高中_<科>_檔案資源_教材資源_高中<科>(全).zip」（或更新學年度的同名檔），解壓到 `work/books/<科>/`，用 pymupdf 把每個 PDF 抽成同名 .txt。都找不到就停下來回報，請老師把四科課本 zip 放回下載資料夾。
+
+## 1. 更新考點索引
+把 NNEW 的題目照現有格式附加到 `src/exam_index/gsat_N111_115.jsonl`（每題一行：y, n, u, un, sec, topic, pts, pitfall, diff；pts 取 detail2 的 formulas 文字與 takeaway）。檔名保留不改。
+
+## 2. 四科比對（可交給 4 個子代理平行，一科一個）
+每個子代理要拿到：該科課本 txt、`src/gsat_ref/data/NNEW.json` 與 `detail2/NNEW.json`、該科現有題庫 `src/bank_<phy|chem|bio|earth>.json`、`src/gsat_ref/units.json`，以及下面規則原文：
+
+- 只看 NEW 年學測自然的題目（全部題目都要掃，物理知識可能出現在地科題，以此類推）。
+- **A. 補出處**：現有題庫中，考點在 NEW 年某題確實被考到或解題必須用到（或就是某選項在判斷的內容）的題目，在 `refs` 加上 `"NEW-題號"`（題號補成兩位數，例如 `"116-05"`）。不要牽強。
+- **B. 新增考點**：課本裡要背誦的知識點，若 NEW 年考到、但題庫還沒有，就出 1–3 題加入，`refs` 填 NEW 的題號。課本沒有的內容不出題。
+- 題目格式與現有一樣：
+  `{"u":"P04","t":"mc","q":"…","a":"正解","w":["誤1","誤2","誤3"],"exp":"考點說明","ch":"CH5","refs":["116-05"]}`
+  `{"u":"P11","t":"tf","q":"敘述","tf":true,"exp":"…","ch":"CH6","refs":["116-20"]}`
+  題目約 45 字內、選項約 20 字內、不靠圖；選擇題錯誤選項要合理（可用 pitfall）；是非題約占新增題的三成、對錯約各半；純文字不用 LaTeX，化學式用 Unicode 下標（CO₂、H₂O）；內容以課本為準。
+- 不刪除舊題，不改舊題文字；題目文字不可與現有題目重複（題目文字是遊戲錯題本的 ID）。
+- u 用 units.json 的代碼。若新增題用到目前遊戲沒有的單元（目前沒有 P03、C07、C08、L05、L07、L08、L09），回報時說明，並在 `src/template.html` 的 SUBJ 對應科目 u 陣列補上該代碼。
+- 子代理回報：補了幾題出處、新增幾題（選擇／是非）、各單元增加數、NEW 年有哪些題目內容對不到課本。
+
+## 3. 檢查與建置
+```
+node tools/check_bank.js      # ascii formula / latex 要 0；看是非真假比例
+node build.js                 # dropped 應只有原本的 1 題重複
+```
+再把 index.html 第二個 `<script>` 抽出來 `node --check`。用 python http.server 或預覽開本機頁面，確認首頁「考過年份」多了 NEW 年、頁尾顯示「111～NEW」、答題後出處列出 NEW 年題號。
+
+## 4. 更新說明文字
+- `README.md`：題數（選擇／是非）與年份範圍。
+- 佳慧老師的網站總覽 https://claude.ai/artifact/EtpwShg6DGoTnEd4mNBUUr ：「高中生 › 遊戲化複習」裡「自然戰力覺醒（學測版）」那張卡的 desc，只改題數與年份範圍（「111–115 年」「672 題」→ 新數字），其他一字不動。先用 Artifact `read`（不帶 path）看目前版本，再用 `read` 的 `path: "index.html"` 下載頁面檔，取 `<body>` 與 `</body>` 之間的內容修改後 publish 回同一個 url。Artifact 工具不能用時跳過，回報中列出新文字請老師自己改。
+
+## 5. 發布
+`git add -A && git commit`（訊息結尾加 `Co-Authored-By: Claude <noreply@anthropic.com>`）`&& git push`，等 GitHub Pages 建好後確認線上網址 https://bgjd315-cloud.github.io/gsat-science-game/ 題數正確。
+
+## 回報（繁體中文）
+NEW 年學測自然題數；四科各補了幾題出處、新增幾題並各舉 2 例；遊戲總題數（舊→新）與年份範圍；NEW 年對不到課本的題號；有沒有新開的單元；網站網址；網站總覽是否已更新。
