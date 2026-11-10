@@ -25,6 +25,22 @@ def chroma(img):
     box = im.getchannel("A").point(lambda v: 255 if v > 20 else 0).getbbox()
     return im.crop(box) if box else im
 
+def is_magenta_bg(im):
+    """四個角落有兩個以上是洋紅色，才算洋紅底"""
+    a = im.convert("RGB"); w, h = a.size
+    def mag(p): r, g, b = a.getpixel(p); return min(r, b) - g > 120
+    return sum(mag(p) for p in [(3, 3), (w - 4, 3), (3, h - 4), (w - 4, h - 4)]) >= 2
+
+def vignette(im):
+    """圓角方形遮罩，邊緣 12% 漸淡成透明"""
+    im = im.convert("RGBA"); w, h = im.size
+    y, x = np.mgrid[0:h, 0:w].astype(np.float32)
+    dx = np.minimum(x, w - 1 - x) / w; dy = np.minimum(y, h - 1 - y) / h
+    edge = np.minimum(dx, dy)
+    alpha = np.clip(edge / 0.12, 0, 1) ** 1.5
+    a = np.asarray(im).copy(); a[..., 3] = (a[..., 3] * alpha).astype(np.uint8)
+    return Image.fromarray(a, "RGBA")
+
 def process_one(path):
     """處理單一原圖，回傳輸出檔名與尺寸"""
     stem = os.path.splitext(os.path.basename(path))[0].lower()
@@ -34,7 +50,8 @@ def process_one(path):
         if im.width > 1600: im = im.resize((1600, round(im.height * 1600 / im.width)), Image.LANCZOS)
         im.save(os.path.join(DST, "hero.webp"), "WEBP", quality=80)
     else:
-        im = chroma(im)
+        # Gemini 沒畫洋紅底（例如深色光柱背景）時不去背，改成四邊柔和淡出，融進遊戲的深藍底
+        im = chroma(im) if is_magenta_bg(im) else vignette(im)
         im.thumbnail((512, 512), Image.LANCZOS)
         im.save(os.path.join(DST, stem + ".webp"), "WEBP", quality=85)
     return stem + ".webp", im.size
