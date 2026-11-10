@@ -15,7 +15,7 @@
 - `src/gsat_ref/`：歷屆學測自然逐題資料（取自自然考點導航 gsat-science-map 的 tools/data、detail2）
 - `src/exam_index/gsat_N111_115.jsonl`：289 題考點索引
 - `src/template.html`：遊戲本體；`node build.js` 組出 `index.html`（沒有 refs 或重複的題目不收）
-- `img/`：遊戲圖片，來源是 `img_ref/`（自然考點導航的吉祥物小卡，Canva AI 生成），`python -I tools/process_images.py` 去背縮圖；哪張圖放哪個位置寫在腳本的 MAP
+- `img/`：遊戲圖片。新版對戰風圖片由老師用 Gemini 生成：提示詞在 `Gemini生圖提示詞.md`，用「生圖工作台」（`python -I -X utf8 tools/studio_server.py`，http://localhost:8768/）貼上，原圖存 `img_raw/`、自動去背縮圖到 `img/`。還沒換的位置沿用舊版小卡圖（來源 `img_ref/`，`tools/process_ref.py`）。單元標籤改用科目徽章。
 - `tools/UPDATE.md`：每年加入新一屆學測的步驟（排程 gsat-science-game-yearly-update 每年 3/16 執行）
 - `tools/check_bank.js`：格式檢查；`tools/gen/`：各科產生題庫的腳本
 - `work/report_chem.md`、`work/report_bio.md`：各章候選、保留、刪除的知識點清單

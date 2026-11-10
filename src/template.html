@@ -208,7 +208,7 @@ const SUBJ={bio:{n:"生物",c:"var(--bio)",u:["L01","L02","L03","L04","L05","L06
   phy:{n:"物理",c:"var(--phy)",u:["P01","P02","P03","P04","P05","P06","P07","P08","P09","P10","P11"]},
   earth:{n:"地科",c:"var(--earth)",u:["E01","E02","E03","E04","E05"]}};
 const subjOf=u=>Object.keys(SUBJ).find(k=>SUBJ[k].u.includes(u));
-const ART=u=>IMG.has("u_"+u)?`img/u_${u}.webp`:"data:,";
+const ART=u=>{const s="subj_"+subjOf(u);return IMG.has(s)?`img/${s}.webp`:"data:,"}; /* 單元標籤用科目徽章 */
 const Q=QB.map((r,i)=>r.length>=7?{id:i,u:r[0],q:r[1],a:r[2],w:[r[3],r[4],r[5]],e:r[6],src:r[7]||"課本",tf:false}
   :{id:i,u:r[0],q:r[1],a:r[2]?"O":"X",w:[r[2]?"X":"O"],e:r[3],src:r[4]||"課本",tf:true});
 Q.forEach(q=>{q.id=q.q;q.yrs=(typeof QY!=="undefined"&&QY[q.q])||[]}); /* 以題目文字當穩定 ID；yrs＝歷屆學測考過的年份 */
