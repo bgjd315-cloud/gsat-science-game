@@ -203,15 +203,16 @@ const QB=[];
 <script>
 /* ========= 基本資料 ========= */
 const UNITS={"P01":"物理量與運動學","P02":"力與牛頓運動定律","P03":"動量與碰撞","P04":"功與能量","P05":"圓周運動、簡諧運動與萬有引力","P06":"熱學與氣體動力論","P07":"波動與聲音","P08":"光學","P09":"靜電與電路","P10":"電流磁效應與電磁感應","P11":"近代物理","C01":"原子結構與週期表","C02":"化學鍵與分子結構","C03":"化學計量與反應式","C04":"氣體","C05":"溶液與依數性","C06":"熱化學","C07":"反應速率","C08":"化學平衡","C09":"酸鹼與鹽類","C10":"氧化還原與電化學","C11":"有機化合物","C12":"生活化學、材料與實驗","L01":"細胞構造與生物分子","L02":"細胞代謝（酵素、光合、呼吸）","L03":"遺傳、基因表現與生物技術","L04":"演化與生物多樣性","L05":"生態與環境","L06":"植物構造與生理","L07":"動物生理（消化、循環、呼吸、排泄）","L08":"神經、內分泌與恆定性","L09":"免疫","L10":"生殖與發育","E01":"固體地球（地質、板塊、地震）","E02":"大氣、天氣與氣候","E03":"海洋","E04":"天文與宇宙","E05":"全球變遷與自然災害"};
-const SUBJ={bio:{n:"生物",c:"var(--bio)",u:["L01","L02","L03","L04","L06","L10"]},
-  chem:{n:"化學",c:"var(--chem)",u:["C01","C02","C03","C04","C05","C06","C09","C10","C11","C12"]},
-  phy:{n:"物理",c:"var(--phy)",u:["P01","P02","P04","P05","P06","P07","P08","P09","P10","P11"]},
+const SUBJ={bio:{n:"生物",c:"var(--bio)",u:["L01","L02","L03","L04","L05","L06","L07","L08","L09","L10"]},
+  chem:{n:"化學",c:"var(--chem)",u:["C01","C02","C03","C04","C05","C06","C07","C08","C09","C10","C11","C12"]},
+  phy:{n:"物理",c:"var(--phy)",u:["P01","P02","P03","P04","P05","P06","P07","P08","P09","P10","P11"]},
   earth:{n:"地科",c:"var(--earth)",u:["E01","E02","E03","E04","E05"]}};
 const subjOf=u=>Object.keys(SUBJ).find(k=>SUBJ[k].u.includes(u));
 const ART=u=>IMG.has("u_"+u)?`img/u_${u}.webp`:"data:,";
 const Q=QB.map((r,i)=>r.length>=7?{id:i,u:r[0],q:r[1],a:r[2],w:[r[3],r[4],r[5]],e:r[6],src:r[7]||"課本",tf:false}
   :{id:i,u:r[0],q:r[1],a:r[2]?"O":"X",w:[r[2]?"X":"O"],e:r[3],src:r[4]||"課本",tf:true});
 Q.forEach(q=>{q.id=q.q;q.yrs=(typeof QY!=="undefined"&&QY[q.q])||[]}); /* 以題目文字當穩定 ID；yrs＝歷屆學測考過的年份 */
+for(const s of Object.values(SUBJ))s.u=s.u.filter(u=>Q.some(q=>q.u===u)); /* 沒有題目的單元不顯示 */
 const art=n=>IMG.has(n)?`img/${n}.webp`:"";
 const artTag=(n,cls)=>IMG.has(n)?`<img class="${cls}" src="img/${n}.webp" alt="" onerror="this.remove()">`:"";
 const yrsTxt=q=>{const r=(typeof QREF!=="undefined"&&QREF[q.q])||[];return r.length?`📝 學測考過：${r.map(x=>{const[y,n]=x.split("-");return y+" 年第 "+(+n)+" 題"}).join("、")}`:(q.yrs.length?`📝 ${q.yrs.join("、")} 年學測考過`:"")};
