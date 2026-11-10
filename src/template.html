@@ -178,6 +178,7 @@ table.lb{width:100%;border-collapse:collapse;background:var(--panel);border-radi
 .mode.hasart .ic{display:none}
 .chip .sic{width:20px;height:20px;object-fit:contain;vertical-align:-4px;margin-right:2px}
 .feedback{display:flex;gap:10px;align-items:center}
+.cls{display:inline-block;font-size:12px;font-weight:700;padding:1px 8px;border-radius:999px;margin-right:6px;vertical-align:1px}.cls.a{background:#ff6b35;color:#fff}.cls.b{background:#22d3ee;color:#0b1430}
 .feedback .fm{width:64px;height:64px;object-fit:contain;flex:none}
 .result .trophy{width:140px;height:140px;object-fit:contain;display:block;margin:0 auto -6px;animation:bob 2.4s ease-in-out infinite}
 .hero .slogan{color:var(--ink);font-size:clamp(15px,2.4vw,18px)}
@@ -215,6 +216,8 @@ Q.forEach(q=>{q.id=q.q;q.yrs=(typeof QY!=="undefined"&&QY[q.q])||[]}); /* 以題
 for(const s of Object.values(SUBJ))s.u=s.u.filter(u=>Q.some(q=>q.u===u)); /* 沒有題目的單元不顯示 */
 const art=n=>IMG.has(n)?`img/${n}.webp`:"";
 const artTag=(n,cls)=>IMG.has(n)?`<img class="${cls}" src="img/${n}.webp" alt="" onerror="this.remove()">`:"";
+/* 考點類型：A＝記住就能直接得分；B＝讀圖、計算、推理時必備的基礎 */
+const clsTag=q=>{const c=(typeof QCLS!=="undefined"&&QCLS[q.q])||"";return c==="A"?`<span class="cls a">🎯 直接得分</span>`:c==="B"?`<span class="cls b">🧩 判讀基礎</span>`:""};
 const yrsTxt=q=>{const r=(typeof QREF!=="undefined"&&QREF[q.q])||[];return r.length?`📝 學測考過：${r.map(x=>{const[y,n]=x.split("-");return y+" 年第 "+(+n)+" 題"}).join("、")}`:(q.yrs.length?`📝 ${q.yrs.join("、")} 年學測考過`:"")};
 const FILTERED=Q.some(q=>q.yrs.length);
 const ALLY=Q.flatMap(q=>q.yrs).map(Number);const YR=ALLY.length?`${Math.min(...ALLY)}～${Math.max(...ALLY)}`:"";
@@ -402,7 +405,7 @@ function answer(i){if(G.locked)return;G.locked=true;if(G.qTimer){clearInterval(G
   const ansTxt=q.tf?(q.a==="O"?"⭕ 正確":"❌ 錯誤"):q.a;
   const fb=$("#fb");
   const showExp=G.mode==="practice"||G.mode==="review"||!ok;
-  if(showExp)fb.innerHTML=`<div class="feedback ${ok?"good":"bad"}">${artTag(ok?"mascot_happy":"mascot_oops","fm")}<div>${ok?"答對了！":"正解："+`<b>${esc(ansTxt)}</b>`}<br>📌 ${esc(q.e)}${q.yrs.length?`<br><span style="color:var(--gold);font-size:14px">${yrsTxt(q)}</span>`:""}</div></div>`;
+  if(showExp)fb.innerHTML=`<div class="feedback ${ok?"good":"bad"}">${artTag(ok?"mascot_happy":"mascot_oops","fm")}<div>${ok?"答對了！":"正解："+`<b>${esc(ansTxt)}</b>`}<br>📌 ${esc(q.e)}${q.yrs.length?`<br>${clsTag(q)}<span style="color:var(--gold);font-size:14px">${yrsTxt(q)}</span>`:""}</div></div>`;
   // 更新 HUD
   const hud=app.querySelector(".hud");if(hud){const tmp=document.createElement("div");tmp.innerHTML=hudHTML();hud.replaceWith(tmp.querySelector(".hud"));
     const t=document.querySelector(".top");t.replaceWith(tmp.querySelector(".top"));$("#quit").onclick=()=>{if(confirm("確定要離開這一局嗎？")){clearTimers();home()}}}
@@ -438,7 +441,7 @@ function finish(){clearTimers();if(!G||G.done)return;G.done=true;
 }
 function itemHTML(q,picked){const ans=q.tf?(q.a==="O"?"⭕ 正確":"❌ 錯誤"):q.a;
   return `<div class="item"><div class="uq">${SUBJ[subjOf(q.u)].n}｜${UNITS[q.u]}｜${esc(q.src)}</div><div class="qq">${q.tf?"【是非】":""}${esc(q.q)}</div>
-  <div class="aa">✔ ${esc(ans)}</div>${q.yrs.length?`<div class="uq" style="color:var(--gold)">${yrsTxt(q)}</div>`:""}${picked!==undefined?`<div class="yourA">${picked===null?"⏰ 時間到":"✘ 你選："+esc(q.tf?(picked==="O"?"⭕":"❌"):picked)}</div>`:""}<div class="ee">📌 ${esc(q.e)}</div></div>`}
+  <div class="aa">✔ ${esc(ans)}</div>${q.yrs.length?`<div class="uq" style="color:var(--gold)">${clsTag(q)}${yrsTxt(q)}</div>`:""}${picked!==undefined?`<div class="yourA">${picked===null?"⏰ 時間到":"✘ 你選："+esc(q.tf?(picked==="O"?"⭕":"❌"):picked)}</div>`:""}<div class="ee">📌 ${esc(q.e)}</div></div>`}
 
 /* ========= 排行榜 ========= */
 function board(tab){const keys=Object.keys(LB);tab=tab||keys[0];
